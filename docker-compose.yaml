@@ -1,0 +1,34 @@
+services:
+  postgres:
+    container_name: boost-database
+    image: postgres:13.16-bookworm
+    restart: always
+    shm_size: 128mb
+    ports:
+      - "5432:5432"
+    networks:
+      - boost
+    volumes:
+      - boost-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    environment:
+      POSTGRES_DB: boost-database
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+volumes:
+  boost-data:
+    name: boost-data
+
+networks:
+  boost:
+    name: boost-network
+    driver: bridge
+    external: false
