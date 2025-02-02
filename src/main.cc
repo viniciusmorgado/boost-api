@@ -19,8 +19,7 @@ class Server {
     tcp::acceptor acceptor_;
 
 public:
-    Server(unsigned short port)
-        : acceptor_(ioc_, {tcp::v4(), port}) {
+    Server(unsigned short port) : acceptor_(ioc_, {tcp::v4(), port}) {
         accept();
     }
 

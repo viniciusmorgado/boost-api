@@ -17,6 +17,7 @@ namespace session {
     }
 
         void Session::handle_request(beast::error_code ec) {
+            
             if(ec) {
                 std::cerr << "Error: " << ec.message() << std::endl;
                 return;
@@ -24,7 +25,7 @@ namespace session {
 
             http::response<http::string_body> res;
             res.version(req_.version());
-            res.keep_alive(false);
+            res.keep_alive(req_.keep_alive());
 
             if(req_.method() == http::verb::get && req_.target() == "/api/products") {
                 res.result(http::status::ok);
@@ -39,9 +40,8 @@ namespace session {
 
             res.prepare_payload();
 
-            http::async_write(stream_, res,
-                [self = shared_from_this()](beast::error_code ec, std::size_t) {
+            http::async_write(stream_, res, [self = shared_from_this()](beast::error_code ec, std::size_t) {
                     self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
-                });
+            });
         }
 }
