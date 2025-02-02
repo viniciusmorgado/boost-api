@@ -7,6 +7,8 @@ namespace http = beast::http;
 using tcp = boost::asio::ip::tcp;
 
 namespace session {
+    Session::Session(tcp::socket&& socket) : stream_(std::move(socket)) {}
+
     void Session::run() {
             http::async_read(stream_, buffer_, req_,
                 [self = shared_from_this()](beast::error_code ec, std::size_t bytes_transferred) {
