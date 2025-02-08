@@ -1,39 +1,29 @@
-// #include <boost/beast/core.hpp>
-// #include <boost/beast/http.hpp>
-// #include <boost/beast/version.hpp>
-// #include <boost/asio/ip/tcp.hpp>
-// #include <cstdlib>
-// #include <iostream>
-// #include <memory>
-// #include <string>
+// server.cc
+#include "../include/session.h"
+#include "../include/server.h"
+#include <boost/beast/core.hpp>
+#include <memory>
+#include <iostream>
 
-// namespace beast = boost::beast;
-// namespace http = beast::http;
-// namespace net = boost::asio;
-// using tcp = boost::asio::ip::tcp;
+namespace beast = boost::beast;
+namespace net = boost::asio;
 
-// class Server {
-//     net::io_context ioc_;
-//     tcp::acceptor acceptor_;
+using tcp = boost::asio::ip::tcp;
 
-// public:
-//     Server(unsigned short port)
-//         : acceptor_(ioc_, {tcp::v4(), port}) {
-//         accept();
-//     }
+Server::Server(unsigned short port) : acceptor_(ioc_, {tcp::v4(), port}) {
+    accept();
+}
 
-//     void run() {
-//         ioc_.run();
-//     }
+void Server::run() {
+    ioc_.run();
+}
 
-// private:
-//     void accept() {
-//         acceptor_.async_accept(
-//             [this](beast::error_code ec, tcp::socket socket) {
-//                 if(!ec) {
-//                     std::make_shared<Session>(std::move(socket))->run();
-//                 }
-//                 accept();
-//             });
-//     }
-// };
+void Server::accept() {
+    acceptor_.async_accept(
+        [this](beast::error_code ec, tcp::socket socket) {
+            if(!ec) {
+                std::make_shared<session::Session>(std::move(socket))->run();
+            }
+            accept();
+        });
+}
