@@ -16,3 +16,7 @@ run
 next
 
 # next until the segment fault, or the bug
+
+# How compile
+
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
