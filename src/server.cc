@@ -23,6 +23,8 @@ void Server::accept() {
         [this](beast::error_code ec, tcp::socket socket) {
             if(!ec) {
                 std::make_shared<session::Session>(std::move(socket))->run();
+            } else {
+                std::cerr << "Accept error: " << ec.message() << std::endl; // Added error logging
             }
             accept();
         });

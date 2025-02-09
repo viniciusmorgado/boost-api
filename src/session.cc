@@ -41,6 +41,9 @@ namespace session {
             res.prepare_payload();
 
             http::async_write(stream_, res, [self = shared_from_this()](beast::error_code ec, std::size_t) {
+                if (ec) {
+                    std::cerr << "Error during async_write in handle_request: " << ec.message() << std::endl;
+                }
                     self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
             });
         }
