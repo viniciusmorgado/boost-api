@@ -19,6 +19,8 @@ namespace session {
         void run();
         void handle_request(beast::error_code ec);
 
+        ~Session();
+
     private:
         beast::tcp_stream stream_;
         beast::flat_buffer buffer_;

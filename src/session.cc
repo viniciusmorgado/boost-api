@@ -8,18 +8,23 @@ using tcp = boost::asio::ip::tcp;
 
 namespace session {
     Session::Session(tcp::socket&& socket) : stream_(std::move(socket)) {}
-
+    
+    // break session::Session::run
     void Session::run() {
-            http::async_read(stream_, buffer_, req_,
-                [self = shared_from_this()](beast::error_code ec, std::size_t bytes_transferred) {
-                    self->handle_request(ec);
-                });
+            http::async_read(stream_, buffer_, req_, [self = shared_from_this()](beast::error_code ec, std::size_t bytes_transferred) {
+                if(ec) {
+                    std::cerr << "Error on Session::run() - http::async_read: " << ec.message() << std::endl;
+                    return;
+                }
+                self->handle_request(ec);
+            });
+            
     }
-
+        // break session::Session::handle_request
         void Session::handle_request(beast::error_code ec) {
             
             if(ec) {
-                std::cerr << "Error: " << ec.message() << std::endl;
+                std::cerr << "Error on void Session::handle_requests: " << ec.message() << std::endl;
                 return;
             }
 
@@ -40,11 +45,20 @@ namespace session {
 
             res.prepare_payload();
 
+            // break session.cc:48
             http::async_write(stream_, res, [self = shared_from_this()](beast::error_code ec, std::size_t) {
                 if (ec) {
                     std::cerr << "Error during async_write in handle_request: " << ec.message() << std::endl;
                 }
-                    self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
+                // break session.cc:53
+                self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
             });
         }
+
+        Session::~Session() {
+            std::cout << "~Session() called" << std::endl;
+        }
 }
+
+// Internal library breakpoint
+// break boost::beast::http::basic_fields<std::allocator<char> >::value_type::buffer
