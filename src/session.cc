@@ -1,64 +1,50 @@
+// File: src/session.cc
 #include "../include/session.h"
-#include <boost/beast/http.hpp>
 #include <iostream>
 
-namespace http = beast::http;
+Session::Session(tcp::socket &&socket) : socket_(std::move(socket)), request_handler_{} {}
 
-using tcp = boost::asio::ip::tcp;
+void Session::start() { do_read(); }
 
-namespace session {
-    Session::Session(tcp::socket&& socket) : stream_(std::move(socket)) {}
-    
-    // break session::Session::run
-    void Session::run() {
-            http::async_read(stream_, buffer_, req_, [self = shared_from_this()](beast::error_code ec, std::size_t bytes_transferred) {
-                if(ec) {
-                    std::cerr << "Error on Session::run() - http::async_read: " << ec.message() << std::endl;
-                    return;
-                }
-                self->handle_request(ec);
-            });
-            
-    }
-        // break session::Session::handle_request
-        void Session::handle_request(beast::error_code ec) {
-            
-            if(ec) {
-                std::cerr << "Error on void Session::handle_requests: " << ec.message() << std::endl;
-                return;
+void Session::do_read()
+{
+    auto self(shared_from_this());
+    http::async_read(
+        socket_, buffer_, req_,
+        [self](beast::error_code ec, std::size_t /*bytes_transferred*/)
+        {
+            if (!ec)
+            {
+                auto response = self->request_handler_.handle_request(std::move(self->req_));
+                self->do_write(std::move(response));
             }
-
-            http::response<http::string_body> res;
-            res.version(req_.version());
-            res.keep_alive(req_.keep_alive());
-
-            if(req_.method() == http::verb::get && req_.target() == "/api/products") {
-                res.result(http::status::ok);
-                res.set(http::field::server, "Boost Beast Server");
-                res.set(http::field::content_type, "application/json");
-                res.body() = R"({"message": "this is a list of products"})";
-            } else {
-                res.result(http::status::not_found);
-                res.set(http::field::content_type, "text/plain");
-                res.body() = "Not Found";
+            else if (ec != http::error::end_of_stream)
+            {
+                std::cerr << "Error reading request: " << ec.message() << std::endl;
             }
-
-            res.prepare_payload();
-
-            // break session.cc:48
-            http::async_write(stream_, res, [self = shared_from_this()](beast::error_code ec, std::size_t) {
-                if (ec) {
-                    std::cerr << "Error during async_write in handle_request: " << ec.message() << std::endl;
-                }
-                // break session.cc:53
-                self->stream_.socket().shutdown(tcp::socket::shutdown_send, ec);
-            });
-        }
-
-        Session::~Session() {
-            std::cout << "~Session() called" << std::endl;
-        }
+        });
 }
 
-// Internal library breakpoint
-// break boost::beast::http::basic_fields<std::allocator<char> >::value_type::buffer
+void Session::do_write(http::response<http::string_body> &&res)
+{
+    auto self(shared_from_this());
+
+    http::async_write(socket_, res,
+                      [self](beast::error_code ec, std::size_t bytes_transferred)
+                      {
+                          if (!ec)
+                          {
+                              self->req_ = {};
+                              self->do_read();
+                          }
+                          else
+                          {
+                              std::cerr << "Error writing response: " << ec.message() << std::endl;
+                          }
+
+                          if (ec == http::error::end_of_stream || ec == net::error::connection_reset || ec == net::error::broken_pipe)
+                          {
+                              return;
+                          }
+                      });
+}
